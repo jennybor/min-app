@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { biler, bilFraLenke, kroner, type Bil, type Status, type Vurdering } from "@/lib/biler";
 
-const vurderingStil: Record<Vurdering, { tekst: string; ikon: string; boks: string }> = {
-  godt: { tekst: "Godt kjøp", ikon: "✓", boks: "bg-emerald-50 border-emerald-300 text-emerald-900" },
-  sjekk: { tekst: "Greit, men sjekk dette", ikon: "!", boks: "bg-amber-50 border-amber-300 text-amber-900" },
-  forsiktig: { tekst: "Vær forsiktig", ikon: "✕", boks: "bg-rose-50 border-rose-300 text-rose-900" },
+const vurderingStil: Record<Vurdering, { tekst: string; ikon: string; boks: string; ikonBg: string }> = {
+  godt: { tekst: "Godt kjøp", ikon: "✓", boks: "border-emerald-600 text-emerald-800", ikonBg: "bg-emerald-600" },
+  sjekk: { tekst: "Greit, men sjekk dette", ikon: "!", boks: "border-amber-500 text-amber-800", ikonBg: "bg-amber-500" },
+  forsiktig: { tekst: "Vær forsiktig", ikon: "✕", boks: "border-rose-600 text-rose-800", ikonBg: "bg-rose-600" },
 };
 
 const statusStil: Record<Status, { prikk: string; etikett: string }> = {
@@ -26,10 +26,10 @@ export default function Home() {
   return (
     <div className="flex flex-1 flex-col">
       <Topp onHjem={() => setBil(null)} />
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:py-12">
+      <main className="flex-1">
         {bil ? <Resultat bil={bil} onTilbake={() => setBil(null)} /> : <Start onVelg={velgBil} />}
       </main>
-      <footer className="px-4 pb-8 text-center text-xs text-zinc-500">
+      <footer className="bg-black px-4 py-6 text-center text-xs text-zinc-400">
         Konseptprototype laget for brukertesting. Ikke en ekte NAF-tjeneste. Alle biler, priser og
         råd er eksempeldata.
       </footer>
@@ -39,13 +39,12 @@ export default function Home() {
 
 function Topp({ onHjem }: { onHjem: () => void }) {
   return (
-    <header className="bg-gul">
+    <header className="bg-black text-white">
       <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
-        <button onClick={onHjem} className="text-left">
-          <span className="block text-lg font-bold leading-tight">NAF Kjøpsråd</span>
-          <span className="block text-xs">for deg som skal kjøpe bruktbil</span>
+        <button onClick={onHjem} className="text-left text-lg font-black tracking-tight">
+          NAF <span className="text-gul">Kjøpsråd</span>
         </button>
-        <span className="rounded-full bg-black/10 px-3 py-1 text-xs font-medium">Prototype</span>
+        <span className="rounded-full border border-white/40 px-3 py-1 text-xs font-medium">Prototype</span>
       </div>
     </header>
   );
@@ -71,52 +70,60 @@ function Start({ onVelg }: { onVelg: (bil: Bil) => void }) {
   }
 
   return (
-    <div className="flex flex-col gap-10">
-      <section className="flex flex-col gap-3">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Er bruktbilen et godt kjøp?</h1>
-        <p className="text-lg text-zinc-700">
-          Lim inn lenken til annonsen på Finn. Vi forklarer hva annonsen betyr, sammenligner med
-          lignende biler, og sier rett ut hva du bør passe på.
-        </p>
+    <div className="flex flex-col">
+      <section className="bg-gul">
+        <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-10 sm:py-14">
+          <div className="flex flex-col gap-3">
+            <h1 className="text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl">
+              Er bruktbilen et godt kjøp?
+            </h1>
+            <p className="text-lg">
+              Lim inn lenken til annonsen på Finn. Vi forklarer hva annonsen betyr, sammenligner med
+              lignende biler, og sier rett ut hva du bør passe på.
+            </p>
+          </div>
+
+          <form onSubmit={sjekk} className="flex flex-col gap-3">
+            <label htmlFor="lenke" className="font-bold">
+              Lenke til annonsen
+            </label>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <input
+                id="lenke"
+                type="text"
+                inputMode="url"
+                value={lenke}
+                onChange={(e) => setLenke(e.target.value)}
+                placeholder="https://www.finn.no/mobility/item/..."
+                className="flex-1 rounded-lg border-2 border-black bg-white px-4 py-3 text-base outline-none"
+              />
+              <button
+                type="submit"
+                className="rounded-lg bg-black px-6 py-3 text-base font-bold text-white transition-transform active:scale-[0.98]"
+              >
+                Sjekk bilen
+              </button>
+            </div>
+            {feil && <p className="rounded-md bg-white px-3 py-2 text-sm font-medium text-rose-700">{feil}</p>}
+          </form>
+        </div>
       </section>
 
-      <form onSubmit={sjekk} className="flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-sm">
-        <label htmlFor="lenke" className="font-medium">
-          Lenke til annonsen
-        </label>
-        <input
-          id="lenke"
-          type="text"
-          inputMode="url"
-          value={lenke}
-          onChange={(e) => setLenke(e.target.value)}
-          placeholder="https://www.finn.no/mobility/item/..."
-          className="rounded-xl border border-zinc-300 px-4 py-3 text-base outline-none focus:border-zinc-900"
-        />
-        {feil && <p className="text-sm text-rose-700">{feil}</p>}
-        <button
-          type="submit"
-          className="rounded-xl bg-foreground px-5 py-3 text-base font-semibold text-white transition-transform active:scale-[0.98]"
-        >
-          Sjekk bilen
-        </button>
-      </form>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="font-semibold">Har du ingen annonse? Prøv med en av disse</h2>
+      <section className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-10">
+        <h2 className="text-xl font-black">Har du ingen annonse? Prøv med en av disse</h2>
         <div className="grid gap-3 sm:grid-cols-3">
           {biler.map((b) => (
             <button
               key={b.id}
               onClick={() => onVelg(b)}
-              className="flex flex-col gap-2 rounded-2xl bg-white p-4 text-left shadow-sm transition-shadow hover:shadow-md"
+              className="flex flex-col gap-2 rounded-lg border-2 border-transparent bg-white p-4 text-left transition-colors hover:border-black"
             >
               <BilBilde farge={b.farge} />
-              <span className="font-semibold">{b.navn}</span>
+              <span className="font-bold">{b.navn}</span>
               <span className="text-sm text-zinc-600">
                 {b.ar} · {b.km.toLocaleString("nb-NO")} km
               </span>
-              <span className="text-sm font-medium">{kroner(b.pris)}</span>
+              <span className="font-bold">{kroner(b.pris)}</span>
             </button>
           ))}
         </div>
@@ -130,35 +137,39 @@ function Resultat({ bil, onTilbake }: { bil: Bil; onTilbake: () => void }) {
   const [radgiver, setRadgiver] = useState(false);
 
   return (
-    <div className="flex flex-col gap-6">
-      <button onClick={onTilbake} className="self-start text-sm font-medium text-zinc-600 hover:text-black">
-        ← Sjekk en annen bil
-      </button>
-
-      <section className="flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm">
-        <div className="w-28 shrink-0 sm:w-36">
-          <BilBilde farge={bil.farge} />
-        </div>
-        <div className="flex flex-col">
-          <h1 className="text-xl font-bold sm:text-2xl">
-            {bil.navn} {bil.ar}
-          </h1>
-          <span className="text-sm text-zinc-600">{bil.variant}</span>
-          <span className="text-sm text-zinc-600">
-            {bil.km.toLocaleString("nb-NO")} km · {bil.sted}
-          </span>
-          <span className="mt-1 text-lg font-semibold">{kroner(bil.pris)}</span>
+    <div className="flex flex-col">
+      <section className="bg-gul">
+        <div className="mx-auto flex max-w-2xl flex-col gap-5 px-4 pb-8 pt-5">
+          <button onClick={onTilbake} className="self-start text-sm font-bold underline-offset-4 hover:underline">
+            ← Sjekk en annen bil
+          </button>
+          <div className="flex items-center gap-4">
+            <div className="w-28 shrink-0 sm:w-40">
+              <BilBilde farge={bil.farge} />
+            </div>
+            <div className="flex flex-col">
+              <h1 className="text-2xl font-black leading-tight tracking-tight sm:text-3xl">
+                {bil.navn} {bil.ar}
+              </h1>
+              <span className="text-sm">{bil.variant}</span>
+              <span className="text-sm">
+                {bil.km.toLocaleString("nb-NO")} km · {bil.sted}
+              </span>
+              <span className="mt-1 text-xl font-black">{kroner(bil.pris)}</span>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className={`flex gap-4 rounded-2xl border-2 p-5 ${stil.boks}`}>
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-xl font-bold">
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-6">
+      <section className={`-mt-10 flex gap-4 rounded-lg border-l-8 bg-white p-5 shadow-md ${stil.boks}`}>
+        <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl font-black text-white ${stil.ikonBg}`}>
           {stil.ikon}
         </span>
         <div>
-          <p className="text-sm font-medium uppercase tracking-wide opacity-80">Vår vurdering</p>
-          <h2 className="text-2xl font-bold">{stil.tekst}</h2>
-          <p className="mt-1">{bil.oppsummering}</p>
+          <p className="text-xs font-bold uppercase tracking-widest">Vår vurdering</p>
+          <h2 className="text-3xl font-black tracking-tight">{stil.tekst}</h2>
+          <p className="mt-1 text-black">{bil.oppsummering}</p>
         </div>
       </section>
 
@@ -202,30 +213,33 @@ function Resultat({ bil, onTilbake }: { bil: Bil; onTilbake: () => void }) {
         </ul>
       </Kort>
 
-      <section className="flex flex-col gap-3 rounded-2xl bg-gul p-5">
-        <h2 className="text-xl font-bold">Usikker? Snakk med en NAF-rådgiver</h2>
-        <p>
+      <section className="flex flex-col gap-3 rounded-lg bg-black p-6 text-white">
+        <h2 className="text-2xl font-black tracking-tight">
+          Usikker? Snakk med en <span className="text-gul">NAF-rådgiver</span>
+        </h2>
+        <p className="text-zinc-300">
           En rådgiver kan se på annonsen sammen med deg, og hjelpe deg å vurdere om du bør gå videre
           med bilen.
         </p>
         <button
           onClick={() => setRadgiver(true)}
-          className="self-start rounded-xl bg-foreground px-5 py-3 font-semibold text-white transition-transform active:scale-[0.98]"
+          className="self-start rounded-lg bg-gul px-6 py-3 font-bold text-black transition-transform active:scale-[0.98]"
         >
           Få hjelp av en rådgiver
         </button>
       </section>
 
       {radgiver && <RadgiverVindu onLukk={() => setRadgiver(false)} />}
+      </div>
     </div>
   );
 }
 
 function Kort({ tittel, undertittel, children }: { tittel: string; undertittel?: string; children: React.ReactNode }) {
   return (
-    <section className="flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-sm">
+    <section className="flex flex-col gap-4 rounded-lg bg-white p-5">
       <div>
-        <h2 className="text-lg font-bold">{tittel}</h2>
+        <h2 className="text-xl font-black tracking-tight">{tittel}</h2>
         {undertittel && <p className="text-sm text-zinc-500">{undertittel}</p>}
       </div>
       {children}
