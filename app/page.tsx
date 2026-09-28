@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { biler, bilFraLenke, kroner, type Bil, type Status, type Vurdering } from "@/lib/biler";
 import { loggKlikk } from "@/lib/klikk";
+import Chat from "./Chat";
 
 const vurderingStil: Record<Vurdering, { tekst: string; ikon: string; boks: string; ikonBg: string }> = {
   godt: { tekst: "Godt kjøp", ikon: "✓", boks: "border-emerald-600 text-emerald-800", ikonBg: "bg-emerald-600" },
@@ -264,7 +265,7 @@ function Resultat({ bil, onTilbake }: { bil: Bil; onTilbake: () => void }) {
         </button>
       </section>
 
-      {radgiver && <RadgiverVindu bilId={bil.id} onLukk={() => setRadgiver(false)} />}
+      {radgiver && <RadgiverVindu bil={bil} onLukk={() => setRadgiver(false)} />}
       </div>
     </div>
   );
@@ -334,7 +335,8 @@ function PrisSkala({ bil }: { bil: Bil }) {
   );
 }
 
-function RadgiverVindu({ bilId, onLukk: lukk }: { bilId: string; onLukk: () => void }) {
+function RadgiverVindu({ bil, onLukk: lukk }: { bil: Bil; onLukk: () => void }) {
+  const bilId = bil.id;
   const [valgt, setValgt] = useState<string | null>(null);
 
   function velg(id: string) {
@@ -347,7 +349,7 @@ function RadgiverVindu({ bilId, onLukk: lukk }: { bilId: string; onLukk: () => v
     lukk();
   }
   const valg = [
-    { id: "chat", tittel: "Chat nå", tekst: "Skriv med en rådgiver med en gang." },
+    { id: "chat", tittel: "Chat nå", tekst: "Få svar fra vår KI-rådgiver med en gang." },
     { id: "ring", tittel: "Bli ringt opp", tekst: "En rådgiver ringer deg innen en time." },
     { id: "test", tittel: "Bestill bruktbiltest", tekst: "En NAF-tekniker sjekker bilen før du kjøper." },
   ];
@@ -355,7 +357,9 @@ function RadgiverVindu({ bilId, onLukk: lukk }: { bilId: string; onLukk: () => v
   return (
     <div className="fixed inset-0 z-10 flex items-end justify-center bg-black/40 p-4 sm:items-center" onClick={onLukk}>
       <div className="flex w-full max-w-md flex-col gap-4 rounded-2xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
-        {valgt ? (
+        {valgt === "chat" ? (
+          <Chat bil={bil} />
+        ) : valgt ? (
           <>
             <h2 className="text-xl font-bold">Takk!</h2>
             <p className="text-zinc-700">
