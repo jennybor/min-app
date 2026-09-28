@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { biler, bilFraLenke, kroner, type Bil, type Status, type Vurdering } from "@/lib/biler";
+import { loggKlikk } from "@/lib/klikk";
 
 const vurderingStil: Record<Vurdering, { tekst: string; ikon: string; boks: string; ikonBg: string }> = {
   godt: { tekst: "Godt kjøp", ikon: "✓", boks: "border-emerald-600 text-emerald-800", ikonBg: "bg-emerald-600" },
@@ -18,16 +19,30 @@ const statusStil: Record<Status, { prikk: string; etikett: string }> = {
 export default function Home() {
   const [bil, setBil] = useState<Bil | null>(null);
 
-  function velgBil(ny: Bil) {
+  useEffect(() => {
+    loggKlikk("besok", { skjerm: window.innerWidth < 768 ? "mobil" : "stor" });
+  }, []);
+
+  function velgBil(ny: Bil, via: "eksempel" | "lenke") {
+    loggKlikk("viste_resultat", { bil: ny.id, via });
     setBil(ny);
     window.scrollTo({ top: 0 });
   }
 
+  function tilStart(hvordan: string) {
+    if (bil) loggKlikk("tilbake_til_start", { bil: bil.id, hvordan });
+    setBil(null);
+  }
+
   return (
     <div className="flex flex-1 flex-col">
-      <Topp onHjem={() => setBil(null)} />
+      <Topp onHjem={() => tilStart("logo")} />
       <main className="flex-1">
-        {bil ? <Resultat bil={bil} onTilbake={() => setBil(null)} /> : <Start onVelg={velgBil} />}
+        {bil ? (
+          <Resultat bil={bil} onTilbake={() => tilStart("tilbakeknapp")} />
+        ) : (
+          <Start onVelg={velgBil} />
+        )}
       </main>
       <footer className="bg-black px-4 py-6 text-center text-xs text-zinc-400">
         Konseptprototype laget for brukertesting. Ikke en ekte NAF-tjeneste. Alle biler, priser og
@@ -50,7 +65,7 @@ function Topp({ onHjem }: { onHjem: () => void }) {
   );
 }
 
-function Start({ onVelg }: { onVelg: (bil: Bil) => void }) {
+function Start({ onVelg }: { onVelg: (bil: Bil, via: "eksempel" | "lenke") => void }) {
   const [lenke, setLenke] = useState("");
   const [feil, setFeil] = useState("");
 
@@ -58,15 +73,17 @@ function Start({ onVelg }: { onVelg: (bil: Bil) => void }) {
     e.preventDefault();
     const renset = lenke.trim();
     if (!renset) {
+      loggKlikk("ugyldig_lenke", { grunn: "tom" });
       setFeil("Lim inn lenken til annonsen først.");
       return;
     }
     if (!renset.includes("finn.no")) {
+      loggKlikk("ugyldig_lenke", { grunn: "ikke_finn" });
       setFeil("Det ser ikke ut som en lenke fra Finn. Den skal starte med finn.no eller https://www.finn.no.");
       return;
     }
     setFeil("");
-    onVelg(bilFraLenke(renset));
+    onVelg(bilFraLenke(renset), "lenke");
   }
 
   return (
@@ -115,7 +132,7 @@ function Start({ onVelg }: { onVelg: (bil: Bil) => void }) {
           {biler.map((b) => (
             <button
               key={b.id}
-              onClick={() => onVelg(b)}
+              onClick={() => onVelg(b, "eksempel")}
               className="flex flex-col gap-2 rounded-lg border-2 border-transparent bg-white p-4 text-left transition-colors hover:border-black"
             >
               <BilBilde farge={b.farge} />
@@ -135,6 +152,21 @@ function Start({ onVelg }: { onVelg: (bil: Bil) => void }) {
 function Resultat({ bil, onTilbake }: { bil: Bil; onTilbake: () => void }) {
   const stil = vurderingStil[bil.vurdering];
   const [radgiver, setRadgiver] = useState(false);
+  const bunn = useRef<HTMLElement>(null);
+
+  // Logger når brukeren har scrollet helt ned til rådgiverboksen.
+  useEffect(() => {
+    const element = bunn.current;
+    if (!element) return;
+    const observator = new IntersectionObserver(([oppforing]) => {
+      if (oppforing.isIntersecting) {
+        loggKlikk("scrollet_til_bunnen", { bil: bil.id });
+        observator.disconnect();
+      }
+    });
+    observator.observe(element);
+    return () => observator.disconnect();
+  }, [bil.id]);
 
   return (
     <div className="flex flex-col">
@@ -213,7 +245,7 @@ function Resultat({ bil, onTilbake }: { bil: Bil; onTilbake: () => void }) {
         </ul>
       </Kort>
 
-      <section className="flex flex-col gap-3 rounded-lg bg-black p-6 text-white">
+      <section ref={bunn} className="flex flex-col gap-3 rounded-lg bg-black p-6 text-white">
         <h2 className="text-2xl font-black tracking-tight">
           Usikker? Snakk med en <span className="text-gul">NAF-rådgiver</span>
         </h2>
@@ -222,14 +254,17 @@ function Resultat({ bil, onTilbake }: { bil: Bil; onTilbake: () => void }) {
           med bilen.
         </p>
         <button
-          onClick={() => setRadgiver(true)}
+          onClick={() => {
+            loggKlikk("trykket_radgiver", { bil: bil.id });
+            setRadgiver(true);
+          }}
           className="self-start rounded-lg bg-gul px-6 py-3 font-bold text-black transition-transform active:scale-[0.98]"
         >
           Få hjelp av en rådgiver
         </button>
       </section>
 
-      {radgiver && <RadgiverVindu onLukk={() => setRadgiver(false)} />}
+      {radgiver && <RadgiverVindu bilId={bil.id} onLukk={() => setRadgiver(false)} />}
       </div>
     </div>
   );
@@ -299,8 +334,18 @@ function PrisSkala({ bil }: { bil: Bil }) {
   );
 }
 
-function RadgiverVindu({ onLukk }: { onLukk: () => void }) {
+function RadgiverVindu({ bilId, onLukk: lukk }: { bilId: string; onLukk: () => void }) {
   const [valgt, setValgt] = useState<string | null>(null);
+
+  function velg(id: string) {
+    loggKlikk("valgte_hjelp", { bil: bilId, valg: id });
+    setValgt(id);
+  }
+
+  function onLukk() {
+    loggKlikk("lukket_radgiver", { bil: bilId, hadde_valgt: valgt ?? "ingenting" });
+    lukk();
+  }
   const valg = [
     { id: "chat", tittel: "Chat nå", tekst: "Skriv med en rådgiver med en gang." },
     { id: "ring", tittel: "Bli ringt opp", tekst: "En rådgiver ringer deg innen en time." },
@@ -325,7 +370,7 @@ function RadgiverVindu({ onLukk }: { onLukk: () => void }) {
               {valg.map((v) => (
                 <button
                   key={v.id}
-                  onClick={() => setValgt(v.id)}
+                  onClick={() => velg(v.id)}
                   className="flex flex-col rounded-xl border border-zinc-200 p-4 text-left hover:border-zinc-900"
                 >
                   <span className="font-semibold">{v.tittel}</span>
