@@ -11,7 +11,7 @@ export default function Home() {
         Hei, Jenny!
       </h1>
       <p className="text-lg text-zinc-600 dark:text-zinc-400">
-        Denne teksten endret Claude mens du så på ✨
+        Nå ligger jeg på nett! 🌍
       </p>
       <button
         onClick={() => setAntall(antall + 1)}
